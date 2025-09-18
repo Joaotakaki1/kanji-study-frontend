@@ -11,6 +11,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
 }
@@ -20,13 +21,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('authUser') : null;
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    const initializeAuth = () => {
+      try {
+        const storedToken = localStorage.getItem('authToken');
+        const storedUser = localStorage.getItem('authUser');
+        
+        if (storedToken && storedUser) {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error('Error loading auth data from localStorage:', error);
+        // Clear potentially corrupted data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authUser');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      initializeAuth();
+    } else {
+      setIsLoading(false);
     }
   }, []);
 
@@ -49,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
