@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 
 const TopBar: React.FC = () => {
@@ -13,7 +14,18 @@ const TopBar: React.FC = () => {
       <div className="container mx-auto flex justify-between items-center">
         <span className="font-bold text-xl">Kanji Study</span>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-6">
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link href="/dashboard" className="hover:underline transition-colors">
+              Dashboard
+            </Link>
+            <Link href="/stats" className="hover:underline transition-colors">
+              📊 Stats
+            </Link>
+          </div>
+          
+          {/* User Profile */}
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
               <span className="text-sm font-semibold">
