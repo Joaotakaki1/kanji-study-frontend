@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
-import fetcher from '../../lib/fetcher';
 import apiClient from '../../lib/apiClient';
+import { cacheKeys, revalidationStrategies } from '../../lib/swr-config';
 
 interface Kanji {
   id: number;
@@ -30,74 +30,39 @@ const DeckDetailPage: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Kanji[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [showAllKanjis, setShowAllKanjis] = useState(false);
-  const [allKanjis, setAllKanjis] = useState<Kanji[]>([]);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
 
   const { data: deck, error, mutate } = useSWR<DeckDetail>(
-    id ? `/api/v1/decks/${id}` : null,
-    fetcher
+    id ? cacheKeys.deck(id as string) : null,
+    revalidationStrategies.moderate
   );
 
-  // Debounced search effect
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery.trim() && searchQuery.trim().length >= 1) {
-        handleSearch(searchQuery);
-      } else {
-        setSearchResults([]);
-      }
-    }, 300); // Reduced delay for more responsive search
+  // Use SWR for search results with caching
+  const shouldSearch = searchQuery.trim().length >= 1;
+  const { data: searchResults = [], isLoading: isSearching } = useSWR<Kanji[]>(
+    shouldSearch ? cacheKeys.kanjiSearch(searchQuery.trim()) : null,
+    { ...revalidationStrategies.static, dedupingInterval: 2 * 60 * 1000 } // Cache search results for 2 minutes
+  );
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  const handleSearch = async (query: string) => {
-    try {
-      setIsSearching(true);
-      const response = await apiClient.get(`/api/v1/kanji/search?q=${encodeURIComponent(query)}`);
-      
-      // Handle different possible response structures
-      let results = [];
-      if (response.data.kanji) {
-        results = response.data.kanji;
-      } else if (response.data.kanjis) {
-        results = response.data.kanjis;
-      } else if (Array.isArray(response.data)) {
-        results = response.data;
-      } else {
-        results = [];
-      }
-      
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Search failed:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  // Use SWR for all kanjis with caching
+  const { data: allKanjis = [] } = useSWR<Kanji[]>(
+    showAllKanjis ? cacheKeys.allKanji : null,
+    revalidationStrategies.static
+  );
 
   const handleAddKanji = async (kanjiId: number) => {
     try {
       await apiClient.post(`/api/v1/decks/${id}/kanji`, { kanjiId });
       mutate(); // Refresh deck data
-      setSearchQuery(''); // Clear search
-      setSearchResults([]);
-      // Refresh all kanjis list if it's currently showing
-      if (showAllKanjis) {
-        await handleShowAllKanjis();
-      }
+      setSearchQuery(''); // Clear search - this will invalidate search SWR cache
     } catch (error: unknown) {
       const apiError = error as { response?: { status?: number } };
       if (apiError.response?.status === 409) {
         setWarningMessage('This kanji is already in the deck!');
         setShowWarningModal(true);
       } else {
-        console.error('Failed to add kanji:', error);
         setWarningMessage('Failed to add kanji. Please try again.');
         setShowWarningModal(true);
       }
@@ -109,23 +74,11 @@ const DeckDetailPage: React.FC = () => {
       await apiClient.delete(`/api/v1/decks/${id}/kanji/${kanjiId}`);
       mutate(); // Refresh deck data
     } catch (error) {
-      console.error('Failed to remove kanji:', error);
+      // Silently handle error - user will see it didn't work
     }
   };
 
-  const handleShowAllKanjis = async () => {
-    if (!showAllKanjis) {
-      try {
-        setIsSearching(true);
-        const response = await apiClient.get('/api/v1/kanji');
-        setAllKanjis(response.data.kanji || response.data || []);
-      } catch (error) {
-        console.error('Failed to fetch all kanjis:', error);
-        setAllKanjis([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }
+  const handleShowAllKanjis = () => {
     setShowAllKanjis(!showAllKanjis);
   };
 

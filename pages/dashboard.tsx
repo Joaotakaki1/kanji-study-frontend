@@ -4,13 +4,16 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import { useAuth } from '../context/AuthContext';
 import DeckCard, { Deck } from '../components/DeckCard';
 import CreateDeckModal from '../components/CreateDeckModal';
-import fetcher from '../lib/fetcher';
+import { cacheKeys, revalidationStrategies } from '../lib/swr-config';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   
-  const { data: decks, error, mutate } = useSWR<Deck[]>('/api/v1/decks', fetcher);
+  const { data: decks, error, mutate } = useSWR<Deck[]>(
+    cacheKeys.decks,
+    revalidationStrategies.moderate
+  );
 
   const isLoading = !decks && !error;
 

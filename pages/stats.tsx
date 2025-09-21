@@ -1,10 +1,10 @@
 import React from 'react';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import useSWR from 'swr';
-import fetcher from '../lib/fetcher';
 import StatCard from '../components/analytics/StatCard';
 import WeeklyProgressChart from '../components/analytics/WeeklyProgressChart';
 import GradeDistributionChart from '../components/analytics/GradeDistributionChart';
+import { cacheKeys, revalidationStrategies } from '../lib/swr-config';
 
 // Interface for the API response structure
 interface StudyStatsResponse {
@@ -38,8 +38,8 @@ interface StudyStats {
 
 const StatsPage: React.FC = () => {
   const { data: apiResponse, error, isLoading } = useSWR<StudyStatsResponse>(
-    '/api/v1/study/stats',
-    fetcher
+    cacheKeys.stats,
+    revalidationStrategies.moderate
   );
 
   const stats = apiResponse?.stats;

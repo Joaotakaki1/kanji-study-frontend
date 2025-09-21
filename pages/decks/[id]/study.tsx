@@ -4,8 +4,8 @@ import useSWR, { mutate } from 'swr';
 import ProtectedRoute from '../../../components/auth/ProtectedRoute';
 import Flashcard from '../../../components/study/Flashcard';
 import SessionSummary from '../../../components/study/SessionSummary';
-import fetcher from '../../../lib/fetcher';
 import apiClient from '../../../lib/apiClient';
+import { cacheKeys, revalidationStrategies } from '../../../lib/swr-config';
 
 interface StudyCard {
   id: number; // Primary field (from your API response)
@@ -35,13 +35,9 @@ const StudyPage: React.FC = () => {
   const [answeredCards, setAnsweredCards] = useState<{ kanjiId: number; grade: string }[]>([]);
 
   const { data: session, error, isLoading } = useSWR<StudySession>(
-    id ? `/api/v1/decks/${id}/study` : null,
-    fetcher
+    id ? cacheKeys.deckStudy(id as string) : null,
+    revalidationStrategies.realtime // Study sessions should refresh frequently
   );
-
-  // Debug session data (keep for potential future debugging)
-  console.log('Study session data:', session);
-  console.log('Total cards value:', session?.totalCards, 'Type:', typeof session?.totalCards);
 
   // Ensure we have valid total cards count
   const validTotalCards = session?.totalCards && session.totalCards > 0 ? session.totalCards : (session?.studyCards?.length || 1);
@@ -51,29 +47,20 @@ const StudyPage: React.FC = () => {
 
     const currentCard = session.studyCards[currentIndex];
     
-    // Debug logging
-    console.log('Current card:', currentCard);
-    console.log('ID:', currentCard.id, 'KanjiId:', currentCard.kanjiId);
-    
     // Use id as primary field, kanjiId as fallback
     const kanjiId = currentCard.id || currentCard.kanjiId || 0;
     const kanjiIdNumber = typeof kanjiId === 'string' ? parseInt(kanjiId, 10) : kanjiId;
     
     // Validate we have a valid kanjiId
     if (!kanjiIdNumber || kanjiIdNumber === 0) {
-      console.error('Invalid kanjiId:', kanjiIdNumber, 'Card:', currentCard);
       return;
     }
     
-    console.log('Sending payload:', { kanjiId: kanjiIdNumber, grade });
-    
     try {
-      const response = await apiClient.post('/api/v1/study/progress', {
+      await apiClient.post('/api/v1/study/progress', {
         kanjiId: kanjiIdNumber,
         grade: grade
       });
-      
-      console.log('API response:', response.data);
 
       // Track answered card
       setAnsweredCards(prev => [...prev, { kanjiId: kanjiIdNumber, grade }]);
@@ -84,12 +71,7 @@ const StudyPage: React.FC = () => {
       } else {
         setCurrentIndex(prev => prev + 1);
       }
-    } catch (error) {
-      console.error('Failed to submit answer:', error);
-      if (error && typeof error === 'object' && 'response' in error) {
-        const apiError = error as { response?: { data?: unknown } };
-        console.error('Error response:', apiError.response?.data);
-      }
+    } catch {
       // Still advance to next card even if submission fails
       if (currentIndex + 1 >= session.studyCards.length) {
         setSessionComplete(true);
@@ -145,7 +127,7 @@ const StudyPage: React.FC = () => {
               setAnsweredCards([]);
               
               // Revalidate SWR cache to fetch fresh study data
-              await mutate(`/api/v1/decks/${id}/study`);
+              await mutate(cacheKeys.deckStudy(id as string));
             }}
           />
         </div>
