@@ -48,10 +48,10 @@ const Flashcard: React.FC<FlashcardProps> = ({ card, onAnswer, cardNumber, total
   };
 
   return (
-    <div className="relative w-full max-w-lg min-h-96">
+    <div className="relative w-full max-w-lg">
       {/* Card container with flip animation */}
       <div 
-        className={`relative w-full h-full transition-all duration-500 transform-style-preserve-3d ${
+        className={`relative w-full min-h-[500px] transition-all duration-500 transform-style-preserve-3d ${
           isFlipped ? 'rotate-y-180' : ''
         }`}
       >
@@ -102,62 +102,65 @@ const Flashcard: React.FC<FlashcardProps> = ({ card, onAnswer, cardNumber, total
 
         {/* Back of card (shows meaning and reading) */}
         <div 
-          className={`absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-2xl p-8 flex flex-col justify-center items-center backface-hidden rotate-y-180 ${
+          className={`absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-2xl p-6 flex flex-col justify-between backface-hidden rotate-y-180 ${
             isFlipped ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <div className="text-center w-full">
+          <div className="text-center flex-1 flex flex-col justify-center">
             {/* Small kanji at top */}
-            <div className="text-4xl font-bold mb-4 text-gray-700">
+            <div className="text-4xl font-bold mb-3 text-gray-700">
               {card.character}
             </div>
 
             {/* Meaning */}
-            <div className="text-2xl font-semibold text-gray-800 mb-4">
+            <div className="text-2xl font-semibold text-gray-800 mb-3">
               {card.meaning}
             </div>
 
             {/* Reading */}
-            <div className="text-xl text-gray-600 mb-8 font-medium">
+            <div className="text-xl text-gray-600 mb-4 font-medium">
               {card.reading}
             </div>
 
             {/* Additional info */}
-            <div className="text-sm text-gray-500 mb-8">
+            <div className="text-sm text-gray-500 mb-6">
               {card.strokeCount} strokes • Grade {card.grade} • Frequency #{card.frequency}
             </div>
+          </div>
 
+          {/* Bottom section with question and buttons */}
+          <div className="text-center">
             {/* How well did you know this? */}
-            <div className="text-gray-700 font-medium mb-6">
+            <div className="text-gray-700 font-medium mb-4">
               How well did you know this kanji?
             </div>
 
             {/* Answer buttons */}
-            <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto">
+            <div className="grid grid-cols-2 gap-2 w-full max-w-sm mx-auto">
               <button
                 onClick={() => handleAnswer('bad')}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors shadow-md"
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg font-semibold transition-colors shadow-md text-sm"
               >
                 😵 Bad
                 <div className="text-xs opacity-90 mt-1">Didn&apos;t know</div>
               </button>
               <button
                 onClick={() => handleAnswer('hard')}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors shadow-md"
+                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg font-semibold transition-colors shadow-md text-sm"
               >
                 😅 Hard
                 <div className="text-xs opacity-90 mt-1">Struggled</div>
               </button>
               <button
                 onClick={() => handleAnswer('good')}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors shadow-md"
+                className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg font-semibold transition-colors shadow-md text-sm"
               >
                 😊 Good
                 <div className="text-xs opacity-90 mt-1">Got it right</div>
               </button>
               <button
                 onClick={() => handleAnswer('easy')}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors shadow-md"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg font-semibold transition-colors shadow-md text-sm"
               >
                 🎯 Easy
                 <div className="text-xs opacity-90 mt-1">Too easy</div>
@@ -168,7 +171,7 @@ const Flashcard: React.FC<FlashcardProps> = ({ card, onAnswer, cardNumber, total
       </div>
 
       {/* Card counter */}
-      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-gray-500 text-sm">
+      <div className="mt-6 text-center text-gray-500 text-sm">
         Card {cardNumber} of {totalCards}
       </div>
     </div>

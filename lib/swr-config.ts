@@ -31,6 +31,7 @@ export const swrConfig: SWRConfiguration = {
 // Cache key generators for consistent caching
 export const cacheKeys = {
   decks: '/api/v1/decks',
+  deckTemplates: '/api/v1/decks/templates',
   deck: (id: string | number) => `/api/v1/decks/${id}`,
   deckStudy: (id: string | number) => `/api/v1/decks/${id}/study`,
   stats: '/api/v1/study/stats',

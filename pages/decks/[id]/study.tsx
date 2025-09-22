@@ -235,12 +235,12 @@ const StudyPage: React.FC = () => {
         </div>
 
         {/* Flashcard Component */}
-        <div className="flex justify-center flashcard-container">
+        <div className="flex justify-center mb-16 px-4" style={{ perspective: '1000px' }}>
           <Flashcard
             card={currentCard}
             onAnswer={handleAnswer}
             cardNumber={currentIndex + 1}
-            totalCards={session.totalCards}
+            totalCards={validTotalCards}
           />
         </div>
       </div>

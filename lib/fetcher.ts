@@ -13,6 +13,11 @@ export const fetcher = async (url: string) => {
     return response.data.session;
   }
   
+  // Handle deck templates response
+  if (url === '/api/v1/decks/templates' && response.data.templateDecks) {
+    return response.data;
+  }
+  
   // Handle individual deck responses
   if (url.startsWith('/api/v1/decks/') && response.data.deck) {
     return response.data.deck;

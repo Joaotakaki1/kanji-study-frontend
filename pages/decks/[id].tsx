@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import apiClient from '../../lib/apiClient';
 import { cacheKeys, revalidationStrategies } from '../../lib/swr-config';
@@ -33,6 +33,8 @@ const DeckDetailPage: React.FC = () => {
   const [showAllKanjis, setShowAllKanjis] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: deck, error, mutate } = useSWR<DeckDetail>(
     id ? cacheKeys.deck(id as string) : null,
@@ -73,13 +75,32 @@ const DeckDetailPage: React.FC = () => {
     try {
       await apiClient.delete(`/api/v1/decks/${id}/kanji/${kanjiId}`);
       mutate(); // Refresh deck data
-    } catch (error) {
+    } catch {
       // Silently handle error - user will see it didn't work
     }
   };
 
   const handleShowAllKanjis = () => {
     setShowAllKanjis(!showAllKanjis);
+  };
+
+  const handleDeleteDeck = async () => {
+    try {
+      setIsDeleting(true);
+      await apiClient.delete(`/api/v1/decks/${id}`);
+      
+      // Invalidate decks cache to refresh dashboard
+      await globalMutate(cacheKeys.decks);
+      
+      // Navigate back to dashboard
+      router.push('/dashboard');
+    } catch {
+      setWarningMessage('Failed to delete deck. Please try again.');
+      setShowWarningModal(true);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
 
   if (!id) {
@@ -134,18 +155,35 @@ const DeckDetailPage: React.FC = () => {
                 </p>
               </div>
               
-              {/* Start Study Button */}
-              {deck.kanjis && deck.kanjis.length > 0 && (
+              {/* Action Buttons */}
+              {deck.kanjis && deck.kanjis.length > 0 ? (
                 <div className="flex flex-col items-end space-y-2">
-                  <button
-                    onClick={() => router.push(`/decks/${deck.id}/study`)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-colors shadow-lg"
-                  >
-                    🧠 Start Study Session
-                  </button>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-medium transition-colors"
+                    >
+                      🗑️ Delete Deck
+                    </button>
+                    <button
+                      onClick={() => router.push(`/decks/${deck.id}/study`)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-colors shadow-lg"
+                    >
+                      🧠 Start Study Session
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500">
                     Study {deck.kanjis.length} kanji{deck.kanjis.length !== 1 ? 's' : ''}
                   </p>
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-medium transition-colors"
+                  >
+                    🗑️ Delete Deck
+                  </button>
                 </div>
               )}
             </div>
@@ -311,6 +349,55 @@ const DeckDetailPage: React.FC = () => {
             )}
           </>
         ) : null}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-red-600">Delete Deck</h2>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  disabled={isDeleting}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Are you sure you want to delete <strong>&ldquo;{deck?.title}&rdquo;</strong>?
+                </p>
+                <p className="text-red-600 text-sm">
+                  This action cannot be undone. All progress and study data for this deck will be permanently lost.
+                </p>
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteDeck}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded font-medium transition-colors flex items-center space-x-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Delete Deck</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Warning Modal */}
         {showWarningModal && (
